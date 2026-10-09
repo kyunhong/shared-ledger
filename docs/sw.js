@@ -1,6 +1,6 @@
 // 서비스 워커 — 앱 화면을 캐시해 오프라인에서도 열리게 함 (API 요청은 건드리지 않음)
 // 앱 파일을 고치면 아래 버전 숫자를 올려 주세요.
-const CACHE = 'ledger-v2';
+const CACHE = 'ledger-v3';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './js/app.js', './js/api.js', './js/config.js', './js/stats.js', './js/charts.js', './js/store.js',

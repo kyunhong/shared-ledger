@@ -16,26 +16,26 @@ const TYPES = ['입금', '출금'];
 const SHEET = { ENTRIES: '내역', CATEGORIES: '카테고리', BUDGETS: '예산' };
 const HEADERS = {
   [SHEET.ENTRIES]: ['id', '날짜', '작성자', '구분', '금액', '카테고리', '메모', '등록일시', '수정일시'],
-  [SHEET.CATEGORIES]: ['이름', '구분', '아이콘', '색상', '순서'],
+  [SHEET.CATEGORIES]: ['이름', '구분', '아이콘', '색상', '순서', '고정비'],
   [SHEET.BUDGETS]: ['작성자', '카테고리', '월예산'],
 };
 
 const DEFAULT_CATEGORIES = [
-  ['월급', '입금', '💰', '#22A06B', 1],
-  ['부수입', '입금', '💵', '#4BCE97', 2],
-  ['기타입금', '입금', '📥', '#7EE2B8', 3],
-  ['식비', '출금', '🍚', '#F97316', 10],
-  ['카페·간식', '출금', '☕', '#A16207', 11],
-  ['주유', '출금', '⛽', '#EF4444', 12],
-  ['교통', '출금', '🚌', '#3B82F6', 13],
-  ['포켓몬카드', '출금', '🃏', '#EAB308', 14],
-  ['쇼핑', '출금', '🛍️', '#EC4899', 15],
-  ['데이트', '출금', '💕', '#F43F5E', 16],
-  ['생활·주거', '출금', '🏠', '#6366F1', 17],
-  ['통신·구독', '출금', '📱', '#06B6D4', 18],
-  ['의료·건강', '출금', '💊', '#10B981', 19],
-  ['경조사·선물', '출금', '🎁', '#8B5CF6', 20],
-  ['기타지출', '출금', '📦', '#64748B', 99],
+  ['월급', '입금', '💰', '#22A06B', 1, false],
+  ['부수입', '입금', '💵', '#4BCE97', 2, false],
+  ['기타입금', '입금', '📥', '#7EE2B8', 3, false],
+  ['식비', '출금', '🍚', '#F97316', 10, false],
+  ['카페·간식', '출금', '☕', '#A16207', 11, false],
+  ['주유', '출금', '⛽', '#EF4444', 12, false],
+  ['교통', '출금', '🚌', '#3B82F6', 13, false],
+  ['포켓몬카드', '출금', '🃏', '#EAB308', 14, false],
+  ['쇼핑', '출금', '🛍️', '#EC4899', 15, false],
+  ['데이트', '출금', '💕', '#F43F5E', 16, false],
+  ['생활·주거', '출금', '🏠', '#6366F1', 17, true],
+  ['통신·구독', '출금', '📱', '#06B6D4', 18, true],
+  ['의료·건강', '출금', '💊', '#10B981', 19, false],
+  ['경조사·선물', '출금', '🎁', '#8B5CF6', 20, false],
+  ['기타지출', '출금', '📦', '#64748B', 99, false],
 ];
 
 /* ───────────────────────── 초기 설정 ───────────────────────── */
@@ -62,7 +62,7 @@ function setup() {
 
   const cats = ss.getSheetByName(SHEET.CATEGORIES);
   if (cats.getLastRow() === 1) {
-    cats.getRange(2, 1, DEFAULT_CATEGORIES.length, 5).setValues(DEFAULT_CATEGORIES);
+    cats.getRange(2, 1, DEFAULT_CATEGORIES.length, 6).setValues(DEFAULT_CATEGORIES);
   }
 
   // 비어 있는 기본 시트 정리
@@ -166,12 +166,14 @@ function rowToEntry_(r) {
 
 function readCategories_() {
   const sh = sheet_(SHEET.CATEGORIES);
+  migrateCategories_(sh);
   const n = sh.getLastRow() - 1;
   if (n < 1) return [];
-  return sh.getRange(2, 1, n, 5).getValues()
+  return sh.getRange(2, 1, n, 6).getValues()
     .filter(function (r) { return r[0] !== ''; })
     .map(function (r) {
-      return { name: String(r[0]), type: String(r[1]), icon: String(r[2]), color: String(r[3]), order: Number(r[4]) || 0 };
+      return { name: String(r[0]), type: String(r[1]), icon: String(r[2]), color: String(r[3]), order: Number(r[4]) || 0,
+        fixed: r[5] === true || String(r[5]).toUpperCase() === 'TRUE' };
     })
     .sort(function (a, b) { return a.order - b.order; });
 }
@@ -249,14 +251,15 @@ function saveCategory_(req) {
   if (TYPES.indexOf(c.type) < 0) throw new Error('카테고리 구분이 올바르지 않습니다.');
   const original = String(req.originalName || '').trim();
   const row = [safe_(name), c.type, safe_(String(c.icon || '📦').slice(0, 8)),
-    /^#[0-9A-Fa-f]{6}$/.test(c.color) ? c.color : '#64748B', Number(c.order) || 50];
+    /^#[0-9A-Fa-f]{6}$/.test(c.color) ? c.color : '#64748B', Number(c.order) || 50, c.fixed === true];
 
   return withLock_(function () {
     const sh = sheet_(SHEET.CATEGORIES);
     const target = findRow_(sh, original || name);
     if (original && original !== name && findRow_(sh, name) > 0) throw new Error('같은 이름의 카테고리가 이미 있습니다.');
 
-    if (target > 0) sh.getRange(target, 1, 1, 5).setValues([row]);
+    migrateCategories_(sh);
+    if (target > 0) sh.getRange(target, 1, 1, 6).setValues([row]);
     else sh.appendRow(row);
 
     // 이름이 바뀌면 기존 내역·예산도 함께 변경
@@ -266,6 +269,16 @@ function saveCategory_(req) {
     }
     return readCategories_();
   });
+}
+
+/** 예전 시트에 '고정비' 열이 없으면 추가 (통신·구독, 생활·주거는 고정비로 시작) */
+function migrateCategories_(sh) {
+  if (sh.getRange(1, 6).getValue() === '고정비') return;
+  sh.getRange(1, 6).setValue('고정비').setFontWeight('bold').setBackground('#f1f5f9');
+  const n = sh.getLastRow() - 1;
+  if (n < 1) return;
+  const names = sh.getRange(2, 1, n, 1).getValues();
+  sh.getRange(2, 6, n, 1).setValues(names.map(function (r) { return [r[0] === '통신·구독' || r[0] === '생활·주거']; }));
 }
 
 function deleteCategory_(req) {

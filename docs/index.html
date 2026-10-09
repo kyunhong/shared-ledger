@@ -26,7 +26,12 @@
   <div id="app" hidden>
     <header class="topbar">
       <div id="topbar-main"></div>
-      <button id="sync" class="sync" data-act="sync" hidden></button>
+      <div class="topbar-side">
+        <button id="sync" class="sync" data-act="sync" hidden></button>
+        <button id="gear" class="gear" data-act="tab" data-tab="settings" aria-label="설정">
+          <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+        </button>
+      </div>
     </header>
 
     <main id="view"></main>
@@ -35,17 +40,17 @@
       <button class="tab" data-act="tab" data-tab="home">
         <svg viewBox="0 0 24 24"><path d="M4 10.2 12 4l8 6.2V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/></svg><span>홈</span>
       </button>
-      <button class="tab" data-act="tab" data-tab="list">
-        <svg viewBox="0 0 24 24"><path d="M5 5.5h14M5 12h14M5 18.5h9"/></svg><span>내역</span>
+      <button class="tab" data-act="tab" data-tab="together">
+        <svg viewBox="0 0 24 24"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg><span>함께</span>
       </button>
       <button class="tab add" data-act="new-entry" aria-label="기록하기">
         <span class="add-btn"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></span>
       </button>
+      <button class="tab" data-act="tab" data-tab="list">
+        <svg viewBox="0 0 24 24"><path d="M5 5.5h14M5 12h14M5 18.5h9"/></svg><span>내역</span>
+      </button>
       <button class="tab" data-act="tab" data-tab="stats">
         <svg viewBox="0 0 24 24"><path d="M5 19.5V13M12 19.5V5M19 19.5V9.5"/></svg><span>통계</span>
-      </button>
-      <button class="tab" data-act="tab" data-tab="settings">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.2"/><circle cx="5.5" cy="12" r="1.2"/><circle cx="18.5" cy="12" r="1.2"/></svg><span>설정</span>
       </button>
     </nav>
   </div>
